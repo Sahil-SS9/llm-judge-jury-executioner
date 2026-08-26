@@ -1,4 +1,4 @@
-# LLM Council — Multi-Model Deliberation Skill
+# LLM Judge Jury Executioner — Multi-Model Deliberation Skill
 
 Stop trusting a single LLM's first answer for high-stakes decisions. Run any
 question through a council of diverse AI advisors who independently reason,
@@ -52,16 +52,16 @@ Verdict (MD) + HTML Report + JSON Transcript + Minority Report
 ### In Claude Code / Hermes Agent
 
 ```bash
-git clone https://github.com/Sahil-SS9/llm-council-skill ~/.claude/skills/llm-council
+git clone https://github.com/Sahil-SS9/llm-judge-jury-executioner ~/.claude/skills/llm-council
 # or for Hermes:
-git clone https://github.com/Sahil-SS9/llm-council-skill ~/.hermes/skills/llm-council
+git clone https://github.com/Sahil-SS9/llm-judge-jury-executioner ~/.hermes/skills/llm-council
 ```
 
 ### Direct CLI
 
 ```bash
-git clone https://github.com/Sahil-SS9/llm-council-skill
-cd llm-council-skill
+git clone https://github.com/Sahil-SS9/llm-judge-jury-executioner
+cd llm-judge-jury-executioner
 pip install openai pyyaml
 ```
 
@@ -160,7 +160,7 @@ MIT — see [LICENSE](LICENSE).
 
 - [Andrej Karpathy](https://github.com/karpathy/llm-council) — original LLM Council concept
 - [Ole Lehmann (aiwithremy)](https://github.com/aiwithremy/claude-skills-llm-council) — Claude Code skill format
-- [tenfoldmarc](https://github.com/tenfoldmarc/llm-council-skill) — HTML report + advisor personas
+- [tenfoldmarc](https://github.com/tenfoldmarc/llm-judge-jury-executioner) — HTML report + advisor personas
 - [magnus919](https://github.com/magnus919/hermes-council) — dynamic agent composition + cross-examination
 - [rachittshah](https://github.com/rachittshah/llmcouncil) — protocol selection + adaptive stopping
 - [MAGI](https://magi-council.org) — minority report pattern

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LLM Council Engine — Standalone Multi-Model Deliberation
+LLM Judge Jury Executioner Engine — Standalone Multi-Model Deliberation
 
 Runs a 5-phase council deliberation on any question using multiple LLM providers.
 Requires only the `openai` Python package (pip install openai) and a YAML parser
@@ -672,7 +672,7 @@ def phase_cascade_breaker(
 # PHASE 3: CHAIRMAN SYNTHESIS + MINORITY REPORT
 # ============================================================
 
-CHAIRMAN_SYSTEM = """You are the Chairman of the LLM Council. Your job is to synthesize
+CHAIRMAN_SYSTEM = """You are the Chairman of the LLM Judge Jury Executioner council. Your job is to synthesize
 all responses, cross-examination output, rankings, and the cascade-breaker output into
 a single final verdict. You are NOT averaging — you are judging. Where advisors agree,
 state the consensus. Where they clash, surface the tension. Where the cascade-breaker
@@ -836,7 +836,7 @@ def format_verdict_markdown(question: str, verdict: dict, critiques: list, cross
                            rankings: dict, cascade_breaker: dict, minority: Optional[dict]) -> str:
     """Format the verdict as human-readable markdown."""
     lines = [
-        "# LLM Council Verdict",
+        "# LLM Judge Jury Executioner Verdict",
         "",
         f"**Question:** {question}",
         f"**Verdict:** {verdict.get('verdict', 'UNKNOWN')}",
@@ -1035,6 +1035,9 @@ def run_council(question: str, config: CouncilConfig, output_dir: str = ".") -> 
     }
 
     total_tokens = 0
+    cascade_breaker_result = None
+    cross_exam = {}
+    rankings = {}
 
     # --- Phase 0: Compose ---
     advisors = None
@@ -1110,9 +1113,8 @@ def run_council(question: str, config: CouncilConfig, output_dir: str = ".") -> 
 
     # council-verdict.md
     verdict_md = format_verdict_markdown(
-        question, verdict, critiques, cross_exam if "cross_exam" in dir() else {},
-        rankings if "rankings" in dir() else {},
-        cascade_breaker_result if cascade_breaker_result else {},
+        question, verdict, critiques, cross_exam, rankings,
+        cascade_breaker_result or {},
         result["phases"].get("minority_report"),
     )
     (out / "council-verdict.md").write_text(verdict_md)
@@ -1138,10 +1140,8 @@ def run_council(question: str, config: CouncilConfig, output_dir: str = ".") -> 
     # council-report.html
     if config.html_report:
         html = format_html_report(
-            question, verdict, critiques,
-            cross_exam if "cross_exam" in dir() else {},
-            rankings if "rankings" in dir() else {},
-            cascade_breaker_result if cascade_breaker_result else {},
+            question, verdict, critiques, cross_exam, rankings,
+            cascade_breaker_result or {},
             result["phases"].get("minority_report"),
         )
         (out / "council-report.html").write_text(html)
@@ -1160,7 +1160,7 @@ def run_council(question: str, config: CouncilConfig, output_dir: str = ".") -> 
 # ============================================================
 
 def main():
-    parser = argparse.ArgumentParser(description="LLM Council — Multi-Model Deliberation Engine")
+    parser = argparse.ArgumentParser(description="LLM Judge Jury Executioner — Multi-Model Deliberation Engine")
     parser.add_argument("--question", "-q", help="The question to deliberate")
     parser.add_argument("--config", "-c", required=True, help="Path to config file (YAML or JSON)")
     parser.add_argument("--output-dir", "-o", default="./council-output", help="Output directory")

@@ -12,7 +12,7 @@ platforms: [linux, macos, windows]
 tags: [council, deliberation, multi-llm, decision-making, peer-review, debate]
 ---
 
-# LLM Council
+# LLM Judge Jury Executioner
 
 Stop trusting a single LLM's first answer for high-stakes decisions. Run any
 question through a council of diverse AI advisors who independently reason,

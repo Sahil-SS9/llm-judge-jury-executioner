@@ -1,6 +1,6 @@
 # Research Basis
 
-This document lists the academic and community sources that inform the LLM Council
+This document lists the academic and community sources that inform the LLM Judge Jury Executioner
 skill architecture, with the specific findings incorporated into the design.
 
 ## Community Repositories
@@ -42,8 +42,8 @@ peer-review each other, and a chairman delivers a verdict.
 - No cross-examination, no cascade-breaking, no minority report
 - No fallback chains, no quorum, no error handling
 
-### 3. tenfoldmarc/llm-council-skill (674 stars)
-**Repo:** https://github.com/tenfoldmarc/llm-council-skill
+### 3. tenfoldmarc/llm-judge-jury-executioner (674 stars)
+**Repo:** https://github.com/tenfoldmarc/llm-judge-jury-executioner
 **Created:** 2026-04-18
 
 A Claude Code skill with 5 advisor personas: Contrarian, First Principles Thinker,
@@ -208,7 +208,7 @@ dropping below quorum.
 
 ## KENSEI Production System
 
-The LLM Council skill is based on the production council system running in
+The LLM Judge Jury Executioner skill is based on the production council system running in
 KenseiAgent since June 2026. The production system (735 LOC, 20+ documented
 pitfalls fixed) contributes:
 
