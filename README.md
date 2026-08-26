@@ -1,5 +1,7 @@
 # LLM Judge Jury Executioner — Multi-Model Deliberation Skill
 
+![LLM Judge Jury Executioner](assets/banner.png)
+
 Stop trusting a single LLM's first answer for high-stakes decisions. Run any
 question through a council of diverse AI advisors who independently reason,
 cross-examine each other's positions, rank responses anonymously, and produce
@@ -25,27 +27,30 @@ Phase 3: Chairman      — Synthesizes APPROVED/REVISE verdict
 Verdict (MD) + HTML Report + JSON Transcript + Minority Report
 ```
 
-## Why This Is Different
+## Comparison with Karpathy's LLM Council
 
-| Feature | Karpathy | aiwithremy | tenfoldmarc | magnus919 | rachittshah | **This Skill** |
-|---------|----------|------------|-------------|-----------|-------------|----------------|
-| Multi-provider panel | Via OpenRouter | ❌ (Claude only) | ❌ (Claude only) | ❌ (single) | ✅ | ✅ |
-| Fallback chains | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (per-member + shared pool) |
-| Quorum + error handling | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Dynamic agent composition | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| Cross-examination | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| Cascade-breaker (skeptic) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Minority report | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Evidence labeling | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| HTML visual report | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
-| Protocol selection | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ (6 protocols) |
-| Adaptive stopping | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| REVISE loop with cap | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Token cap tracking | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Diversity validation | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Skill format (portable) | ❌ (web app) | ✅ | ✅ | ❌ (plugin) | ✅ | ✅ |
-| Research-backed | ❌ | ❌ | ❌ | Partial | Partial | ✅ (10+ citations) |
-| Production-hardened | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (20+ pitfalls fixed) |
+| Feature | Karpathy LLM Council | LLM Judge Jury Executioner |
+|---------|---------------------|---------------------------|
+| Format | Local web app (Python + JS) | Portable skill (SKILL.md + standalone Python engine) |
+| Provider model | Single provider (OpenRouter) | Multi-provider with per-member fallback chains + shared pool |
+| Panel composition | Static config | Dynamic agent composition (Phase 0 generates diverse personas) |
+| Deliberation phases | 3 (review → rank → chairman) | 5 (compose → review → cross-exam + rank → cascade-breaker → chairman + minority) |
+| Cross-examination | No — ranking only | Yes — members concede, disagree, and revise before ranking |
+| Cascade-breaking | No | Yes — skeptic re-derives verdict from first principles |
+| Minority report | No | Yes — lowest-confidence member preserves dissent |
+| Evidence labeling | No | Yes — every claim tagged [empirical] [mechanistic] [strategic] [ethical] [heuristic] |
+| Protocol selection | Single protocol | 6 protocols: deliberate, vote, synthesize, critique, redteam, mav |
+| Adaptive stopping | No | Yes — KS statistic convergence detection |
+| Fallback chains | No | Per-member + shared fallback pool (13 entries, 4 providers) |
+| Quorum handling | No | Quorum minimum with auto-REVISE on failure |
+| Error classification | No | Transient vs permanent error handling |
+| Token cap | No | Enforced mid-deliberation |
+| REVISE loop | No | Capped loop with escalation |
+| Diversity validation | No | Cross-owner model duplication + provider concentration warnings |
+| HTML report | No | Yes — visual report with agreement map and clash points |
+| Research backing | None cited | 10+ academic papers cited |
+| Production-hardened | No (vibe-coded, unsupported) | Yes — 20+ pitfalls fixed in production |
+| Platform | Web browser only | Claude Code, Hermes Agent, CLI, CI/CD |
 
 ## Installation
 
@@ -155,14 +160,3 @@ Key findings:
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-## Credits
-
-- [Andrej Karpathy](https://github.com/karpathy/llm-council) — original LLM Council concept
-- [Ole Lehmann (aiwithremy)](https://github.com/aiwithremy/claude-skills-llm-council) — Claude Code skill format
-- [tenfoldmarc](https://github.com/tenfoldmarc/llm-judge-jury-executioner) — HTML report + advisor personas
-- [magnus919](https://github.com/magnus919/hermes-council) — dynamic agent composition + cross-examination
-- [rachittshah](https://github.com/rachittshah/llmcouncil) — protocol selection + adaptive stopping
-- [MAGI](https://magi-council.org) — minority report pattern
-- Academic research: Du et al. (2023), Liang et al. (2023), Choi et al. (2025),
-  Kaesberg et al. (2025), and others — see `references/research-basis.md`
