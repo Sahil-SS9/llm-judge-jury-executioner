@@ -206,25 +206,15 @@ writes a dissenting opinion preserved alongside the verdict. Disagreement is
 recorded, not averaged away. Fallback chains handle permanent-error cases without
 dropping below quorum.
 
-## KENSEI Production System
+## KenseiAgent lineage and separation
 
-The LLM Judge Jury Executioner skill is based on the production council system running in
-KenseiAgent since June 2026. The production system (735 LOC, 20+ documented
-pitfalls fixed) contributes:
+The standalone skill was informed by KenseiAgent's internal council, but the two are separate products with different contracts:
 
-- 3-phase deliberation core (battle-tested across 8+ REVISE loops)
-- Per-member fallback chains + shared fallback pool (13 entries, 4 providers)
-- Runtime model deduplication (active_models set)
-- Quorum minimum (default 2) with auto-REVISE on failure
-- Diversity validation (cross-owner, provider concentration warnings)
-- Token cap tracking with mid-deliberation RuntimeError
-- REVISE loop with max_revise_loops cap (infinite-bounce fix)
-- Cached verdict for pipeline integration
-- Chairman fallback chain (chairman failure no longer auto-fails)
-- Transient vs permanent error classification
-- Custom provider support (custom:Name prefix)
-- Pipeline integration (feature-pipeline stage 4 gate)
+- KenseiAgent consumes task IDs plus PRD/spec artefacts and participates in a governed revision pipeline.
+- This public repository accepts a free-form question and performs one immutable, portable council run.
+- KenseiAgent uses Hermes-native provider routing; this CLI uses OpenAI-compatible endpoints and environment credentials.
+- The public JSON schema is stable and portable, but it is not described as Kensei's internal pipeline schema.
 
-These are the components no community implementation has. They represent
-production-hardening that comes from running the council in a real multi-agent
-system with real tasks and real failures.
+Patterns carried across in standalone form include fallback chains, quorum failure, diversity warnings, token/deadline governance and fail-closed verdicts. Kensei-only mechanisms such as the external REVISE loop, cached pipeline verdicts, `custom:Name` routing and feature-stage gates are deliberately not claimed here.
+
+Engineering tests demonstrate that the standalone mechanisms execute as documented. They do not transfer Kensei's operational history or prove live-provider quality; release notes must record those evidence levels separately.

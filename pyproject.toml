@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=75,<81", "wheel>=0.45,<1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-judge-jury-executioner"
+version = "1.1.0"
+description = "Portable multi-model deliberation council for Hermes, Claude Code and CI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Sahil Saghir" }]
+dependencies = [
+  "openai==2.24.0",
+  "PyYAML==6.0.3",
+]
+
+[project.scripts]
+llm-jje-council = "scripts.council_engine:main"
+
+[tool.setuptools]
+packages = ["scripts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B"]
+ignore = ["E501"]

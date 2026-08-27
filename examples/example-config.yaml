@@ -1,135 +1,63 @@
-# Example LLM Judge Jury Executioner Configuration
-# Copy this file and adjust providers/models to match your API keys.
+# Example LLM Judge Jury Executioner configuration
+# Replace every `your-*` model placeholder with a model ID available from
+# providers you already use. Keep API keys in environment variables.
 #
-# Set environment variables:
-#   export OPENAI_API_KEY="sk-..."
-#   export ANTHROPIC_API_KEY="sk-ant-..."
-#   export GOOGLE_API_KEY="..."
-#   # Or use OpenRouter as a unified provider:
-#   export OPENROUTER_API_KEY="sk-or-..."
+# Supported credential variables:
+#   OPENAI_API_KEY
+#   ANTHROPIC_API_KEY       # only if you deliberately use that provider
+#   GOOGLE_API_KEY
+#   OPENROUTER_API_KEY
+#   CUSTOM_API_KEY + CUSTOM_BASE_URL
 
 council:
-  # Panel configuration
   panel_size: 3
   protocol: deliberate  # deliberate|vote|synthesize|critique|redteam|mav
 
-  # Feature flags
-  compose: true                # Phase 0: dynamic agent composition
-  cross_examination: true      # Phase 2: cross-exam before ranking
-  cascade_breaker: true       # Phase 2b: skeptic role
-  minority_report: true        # Phase 3b: preserve dissent
-  html_report: true            # Generate HTML visual report
-  evidence_labels: true        # Tag claims with evidence types
+  # Optional phases used only when they belong to the selected protocol.
+  compose: true
+  cross_examination: true
+  cascade_breaker: true
+  minority_report: true
+  html_report: true
+  evidence_labels: true
 
-  # Panel members — each runs on a different model for diversity
+  # Use different models/providers where possible. These are placeholders,
+  # not recommendations or guaranteed provider catalogue IDs.
   panel:
     - provider: openai
-      model: gpt-5
+      model: your-openai-model
       fallback:
-        - {provider: anthropic, model: claude-sonnet-4}
-
-    - provider: anthropic
-      model: claude-sonnet-4
-      fallback:
-        - {provider: openai, model: gpt-5}
+        - {provider: openrouter, model: your-openrouter-fallback}
 
     - provider: google
-      model: gemini-3-pro
+      model: your-google-model
       fallback:
-        - {provider: openrouter, model: anthropic/claude-sonnet-4}
+        - {provider: openai, model: your-openai-fallback}
 
-  # Chairman — synthesizes the final verdict
+    - provider: openrouter
+      model: your-openrouter-model
+      fallback:
+        - {provider: google, model: your-google-fallback}
+
   chairman:
     provider: openai
-    model: gpt-5
+    model: your-chairman-model
     fallback:
-      - {provider: anthropic, model: claude-sonnet-4}
-      - {provider: google, model: gemini-3-pro}
+      - {provider: google, model: your-google-fallback}
+      - {provider: openrouter, model: your-openrouter-fallback}
 
-  # Shared fallback pool — tried after per-member fallbacks are exhausted
   fallback_pool:
-    - {provider: openai, model: gpt-5-mini}
-    - {provider: anthropic, model: claude-haiku}
-    - {provider: google, model: gemini-3-flash}
-    - {provider: openrouter, model: anthropic/claude-sonnet-4}
+    - {provider: openrouter, model: your-shared-fallback}
 
-  # Operational settings
-  quorum_min: 2                # Minimum members for valid deliberation
-  max_revise_loops: 4          # REVISE bounce cap before escalation
-  timeout_seconds: 600         # Total council timeout
-  member_timeout_seconds: 180  # Per-member timeout
-  token_cap: 200000            # Total token budget (null to disable)
+  quorum_min: 2
+  timeout_seconds: 600
+  member_timeout_seconds: 180
+  token_cap: 200000  # null disables the cap
 
-  # Optional features
-  adaptive_stopping: false     # KS statistic early stopping (debate only)
-  scan_context: true           # Scan workspace files for question framing
+  # `deliberate` can skip ranking when initial/revised confidence converges.
+  adaptive_stopping: false
 
-
-# --- Alternative: OpenRouter-only config (single API key) ---
-# Uncomment to use OpenRouter as a unified provider for all models.
-#
-# council:
-#   panel_size: 3
-#   protocol: deliberate
-#   compose: true
-#   cross_examination: true
-#   cascade_breaker: true
-#   minority_report: true
-#   html_report: true
-#   evidence_labels: true
-#
-#   panel:
-#     - provider: openrouter
-#       model: openai/gpt-5
-#     - provider: openrouter
-#       model: anthropic/claude-sonnet-4
-#     - provider: openrouter
-#       model: google/gemini-3-pro
-#
-#   chairman:
-#     provider: openrouter
-#     model: openai/gpt-5
-#
-#   fallback_pool:
-#     - {provider: openrouter, model: openai/gpt-5-mini}
-#     - {provider: openrouter, model: anthropic/claude-haiku}
-#
-#   quorum_min: 2
-#   max_revise_loops: 4
-#   timeout_seconds: 600
-#   member_timeout_seconds: 180
-#   token_cap: 200000
-#   adaptive_stopping: false
-#   scan_context: true
-
-
-# --- Alternative: Single-provider with model diversity ---
-# Use this if you only have one API key but want model diversity.
-#
-# council:
-#   panel_size: 3
-#   protocol: deliberate
-#   compose: true
-#   cross_examination: true
-#   cascade_breaker: true
-#   minority_report: true
-#   html_report: true
-#   evidence_labels: true
-#
-#   panel:
-#     - provider: openrouter
-#       model: openai/gpt-5
-#     - provider: openrouter
-#       model: anthropic/claude-sonnet-4
-#     - provider: openrouter
-#       model: google/gemini-3-pro
-#
-#   chairman:
-#     provider: openrouter
-#     model: openai/gpt-5
-#
-#   quorum_min: 2
-#   max_revise_loops: 4
-#   timeout_seconds: 600
-#   member_timeout_seconds: 180
-#   token_cap: 200000
+  # Reads only AGENTS.md, CLAUDE.md, README.md and pyproject.toml from one root.
+  scan_context: true
+  context_root: ""          # empty = current working directory
+  context_max_chars: 16000
