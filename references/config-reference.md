@@ -1,25 +1,14 @@
-# Config Reference
+# Configuration reference
 
-Full schema for `council-config.yaml` (or JSON equivalent).
+The standalone CLI accepts YAML or JSON. Unknown fields and invalid values fail before any provider call.
 
-## Top-Level Structure
+## Complete shape
 
 ```yaml
 council:
-  # Panel configuration
   panel_size: 3
-  panel: [...]
-
-  # Chairman
-  chairman: {...}
-
-  # Fallback pool (shared)
-  fallback_pool: [...]
-
-  # Protocol
   protocol: deliberate
 
-  # Feature flags
   compose: true
   cross_examination: true
   cascade_breaker: true
@@ -27,188 +16,154 @@ council:
   html_report: true
   evidence_labels: true
 
-  # Operational
+  panel:
+    - provider: openai
+      model: your-model
+      fallback:
+        - {provider: openrouter, model: your-fallback}
+
+  chairman: {provider: openai, model: your-chairman}
+  fallback_pool: []
+
   quorum_min: 2
-  max_revise_loops: 4
   timeout_seconds: 600
   member_timeout_seconds: 180
   token_cap: 200000
 
-  # Optional
   adaptive_stopping: false
   scan_context: true
+  context_root: ""
+  context_max_chars: 16000
 ```
 
-## Fields
+## Core fields
 
-### panel_size
-- **Type:** int
-- **Default:** 3
-- **Range:** 2-10
-- Number of panel members. Each member runs on a separate model/provider.
+### `panel_size`
 
-### panel
-- **Type:** list of dicts
-- **Required:** Yes (at least one entry)
-- Each entry defines a panel member:
+- Integer, 2-10; default `3`.
+- The configured panel is truncated or repeated to this size.
 
-```yaml
-panel:
-  - provider: openai           # Provider name (see below)
-    model: gpt-5               # Model slug
-    base_url: "https://..."    # Optional: override provider default
-    fallback:                  # Optional: per-member fallback chain
-      - {provider: anthropic, model: claude-sonnet-4}
-      - {provider: google, model: gemini-3-pro}
-```
+### `panel`
 
-### chairman
-- **Type:** dict
-- **Default:** First panel member
-- The chairman model that synthesizes the final verdict.
+- List of mappings containing non-empty `provider` and `model`.
+- Required at runtime.
+- Each optional `fallback` is an ordered list of provider/model mappings.
 
-```yaml
-chairman:
-  provider: openai
-  model: gpt-5
-  fallback:
-    - {provider: anthropic, model: claude-sonnet-4}
-```
+### `chairman`
 
-### fallback_pool
-- **Type:** list of dicts
-- **Default:** Empty
-- Shared pool tried after per-member fallbacks are exhausted. Ordered by
-  cost/speed. Runtime model deduplication prevents same-model collisions.
+- Mapping containing `provider` and `model`.
+- If omitted, the first panel member is used.
+- Protocols without a chairman phase (`vote`, `critique`, `mav`) still need panel members but do not call the chairman.
 
-```yaml
-fallback_pool:
-  - {provider: openai, model: gpt-5-mini}
-  - {provider: anthropic, model: claude-haiku}
-  - {provider: google, model: gemini-3-flash}
-```
+### `fallback_pool`
 
-### protocol
-- **Type:** string
-- **Default:** `deliberate`
-- Options: `deliberate`, `vote`, `synthesize`, `critique`, `redteam`, `mav`
+- Ordered shared list tried after one member's own fallbacks.
+- Provider/model collisions are prevented only while a call is active. A model can be reused safely by a later phase.
+- Both transient and permanent primary-provider failures can fall through to an explicitly configured alternative.
 
-| Protocol | Phases | Use case |
-|----------|--------|----------|
-| deliberate | 0→1→2→2b→3 | High-stakes decisions (default) |
-| vote | 1→2 (ranking only) | Quick consensus, prioritization |
-| synthesize | 1→3 (chairman only) | Open-ended questions |
-| critique | 1→2 (critique only) | Peer review of code/writing |
-| redteam | 1→2b→3 | Adversarial testing, security |
-| mav | 1→2 (verification) | Model-as-verifier, fact-checking |
+## Protocols
 
-### compose
-- **Type:** bool
-- **Default:** true
-- Phase 0: Dynamic agent composition. An LLM generates N diverse advisor personas
-  with distinct initial positions before Phase 1.
+Unknown protocols raise `ValueError` before any provider call.
 
-### cross_examination
-- **Type:** bool
-- **Default:** true
-- Phase 2: Each member sees others' positions (anonymised), concedes/disagrees/revises.
+| Protocol | Executed phases | Closure |
+|---|---|---|
+| `deliberate` | compose → independent → cross-exam → ranking → cascade → chairman | chairman judgment |
+| `vote` | independent → ranking | majority; ties revise |
+| `synthesize` | independent → chairman | chairman synthesis |
+| `critique` | independent → cross-exam | any revise vote blocks |
+| `redteam` | independent → cascade → chairman | chairman judgment |
+| `mav` | independent → ranking | unanimous approval required |
 
-### cascade_breaker
-- **Type:** bool
-- **Default:** true
-- Phase 2b: A skeptic re-derives the verdict from first principles, breaking
-  socially plausible cascades.
+### Optional phase flags
 
-### minority_report
-- **Type:** bool
-- **Default:** true
-- Phase 3b: The lowest-confidence panel member writes a minority report
-  preserving dissent.
+- `compose` (bool, default `true`): enables Phase 0 only for `deliberate`.
+- `cross_examination` (bool, default `true`): enables cross-exam when the protocol includes it.
+- `cascade_breaker` (bool, default `true`): enables independent re-derivation when the protocol includes it.
+- `minority_report` (bool, default `true`): asks the lowest-confidence successful member to preserve dissent after closure.
+- `html_report` (bool, default `true`): writes escaped `council-report.html`.
+- `evidence_labels` (bool, default `true`): adds the evidence-tagging directive to Phase 1.
 
-### html_report
-- **Type:** bool
-- **Default:** true
-- Generate a visual HTML report alongside the markdown verdict.
+Flags can remove optional work; they do not expand a protocol beyond its table row.
 
-### evidence_labels
-- **Type:** bool
-- **Default:** true
-- Require panel members to tag every claim with evidence type:
-  [empirical] [mechanistic] [strategic] [ethical] [heuristic]
+## Reliability and budget fields
 
-### quorum_min
-- **Type:** int
-- **Default:** 2
-- Minimum number of panel members that must respond successfully. Below this,
-  the council returns auto-REVISE with a quorum failure note.
+### `quorum_min`
 
-### max_revise_loops
-- **Type:** int
-- **Default:** 4
-- Maximum REVISE bounces before escalating to the human operator.
+- Integer between `1` and `panel_size`; default `2`.
+- Below quorum, the run closes `REVISE` and writes standard artefacts.
 
-### timeout_seconds
-- **Type:** int
-- **Default:** 600
-- Total council timeout in seconds.
+### `timeout_seconds`
 
-### member_timeout_seconds
-- **Type:** int
-- **Default:** 180
-- Per-member call timeout in seconds.
+- Positive number; default `600`.
+- Overall wall-clock deadline. Every phase receives only the remaining time.
+- On breach, diagnostic artefacts are written before `TimeoutError` is raised.
 
-### token_cap
-- **Type:** int or null
-- **Default:** 200000
-- Total token budget across all phases. If exceeded mid-deliberation, raises
-  RuntimeError. Set to `null` to disable.
+### `member_timeout_seconds`
 
-### adaptive_stopping
-- **Type:** bool
-- **Default:** false
-- KS statistic convergence detection for debate-style protocols. If distribution
-  shift between rounds drops below epsilon for consecutive rounds, stops early.
-- **Note:** Only applies to `deliberate` and `vote` protocols with multiple rounds.
+- Positive number; default `180`.
+- Per-call limit, capped to the remaining overall deadline.
 
-### scan_context
-- **Type:** bool
-- **Default:** true
-- Scan workspace files (CLAUDE.md, project files) for additional context when
-  framing the question.
+### `token_cap`
+
+- Positive integer or `null`; default `200000`.
+- Checked after every executed phase, including composition and the final phase.
+- On breach, fail-closed diagnostic artefacts are written before `RuntimeError` is raised.
+
+This standalone CLI has no `max_revise_loops`. It performs one immutable council run; an external workflow must own any edit-and-rerun loop.
+
+## Adaptive stopping
+
+`adaptive_stopping` is a boolean, default `false`.
+
+It currently applies to `deliberate` when cross-examination and ranking are both selected. The engine compares initial and revised confidence distributions with a KS statistic. If stable, ranking is skipped and the reason is recorded under `phases.adaptive_stopping`.
+
+## Workspace context
+
+### `scan_context`
+
+- Boolean, default `true`.
+- Reads only `AGENTS.md`, `CLAUDE.md`, `README.md` and `pyproject.toml` from one root.
+
+### `context_root`
+
+- String path; empty means the current working directory.
+- Scanning is non-recursive; symlinks and hidden files are not read.
+
+### `context_max_chars`
+
+- Positive integer; default `16000`.
+- Shared cap across all allowlisted context files.
+
+Question/context/model payloads are fenced as untrusted data in downstream prompts.
 
 ## Providers
 
-| Provider | Env Var | Base URL |
-|----------|---------|----------|
-| openai | OPENAI_API_KEY | https://api.openai.com/v1 |
-| anthropic | ANTHROPIC_API_KEY | https://api.anthropic.com/v1 |
-| google | GOOGLE_API_KEY | https://generativelanguage.googleapis.com/v1 |
-| openrouter | OPENROUTER_API_KEY | https://openrouter.ai/api/v1 |
-| custom | CUSTOM_API_KEY | CUSTOM_BASE_URL (must set) |
+| Provider | Credential environment variable | OpenAI-compatible base URL |
+|---|---|---|
+| `openai` | `OPENAI_API_KEY` | `https://api.openai.com/v1` |
+| `anthropic` | `ANTHROPIC_API_KEY` | `https://api.anthropic.com/v1` |
+| `google` | `GOOGLE_API_KEY` | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| `openrouter` | `OPENROUTER_API_KEY` | `https://openrouter.ai/api/v1` |
+| `custom` | `CUSTOM_API_KEY` | `CUSTOM_BASE_URL` (required) |
 
-For custom providers, set:
-```bash
-export CUSTOM_API_KEY="your-key"
-export CUSTOM_BASE_URL="https://your-endpoint/v1"
+A member-level `base_url` overrides the built-in route. Model IDs are provider-specific. Keep secrets out of YAML.
+
+## Machine output contract
+
+`council-verdict.json` has `schema_version: 1` and stable top-level fields:
+
+```json
+{
+  "schema_version": 1,
+  "protocol": "deliberate",
+  "verdict": "APPROVED",
+  "issues": [],
+  "recommendation": "...",
+  "total_tokens": 1234,
+  "elapsed_seconds": 12.3,
+  "phases_executed": ["..."],
+  "phases": {"verdict": {"verdict": "APPROVED"}}
+}
 ```
 
-## Fallback Resolution Order
-
-For each panel member or the chairman, the engine tries:
-1. **Primary** — member.provider / member.model
-2. **Per-member fallbacks** — member.fallback list, in order
-3. **Shared fallback_pool** — council-wide, in order
-
-At each step:
-- If the model is already in use by another active member → SKIP (deduplication)
-- Transient errors (429, 402, 408, 500, 502, 503, 504, 529) → try next fallback
-- Permanent errors (400, 401, 403, 404, 422) → fail immediately, no retry
-
-## Diversity Validation
-
-At config load time, the engine checks:
-- **Cross-owner model duplication** — same model appearing in multiple panel members
-- **Provider concentration** — >=3 roles on one provider (single-provider outage risk)
-
-Same-member primary/fallback duplication is intentional (provider failover) and
-NOT flagged.
+The public schema is portable and independent of KenseiAgent's internal pipeline contract.
