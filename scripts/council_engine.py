@@ -490,9 +490,25 @@ class CouncilBudget:
     started_at: float = field(default_factory=time.monotonic)
     total_tokens: int = 0
 
+    def __post_init__(self) -> None:
+        # Clock resolution of time.monotonic() on this platform. Windows
+        # quantizes the monotonic clock to ~15.6 ms ticks, so elapsed time can
+        # legitimately read as exactly 0.0 for the first check of a run.
+        try:
+            self.clock_resolution = max(
+                time.get_clock_info("monotonic").resolution, 0.0
+            )
+        except (AttributeError, ValueError):  # pragma: no cover - ancient Pythons
+            self.clock_resolution = 0.0
+
     def remaining(self, phase: str) -> float:
-        remaining = self.timeout_seconds - (time.monotonic() - self.started_at)
-        if remaining <= 0:
+        elapsed = time.monotonic() - self.started_at
+        remaining = self.timeout_seconds - elapsed
+        if remaining <= 0 or (elapsed <= 0 and self.timeout_seconds <= self.clock_resolution):
+            # The second clause fails closed when the budget is at or below
+            # the observable clock granularity and the clock has not ticked:
+            # such a budget can never be detected as expired by elapsed-time
+            # arithmetic, so it must never reach a billable provider call.
             raise TimeoutError(
                 f"Council timed out before {phase} ({self.timeout_seconds:g}s overall limit)"
             )
