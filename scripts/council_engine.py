@@ -363,7 +363,18 @@ def call_llm(
                 max_tokens=max_tokens,
                 timeout=timeout,
             )
-            text = resp.choices[0].message.content.strip()
+            content = resp.choices[0].message.content
+            if not isinstance(content, str) or not content.strip():
+                # Providers commonly return content=None when a reasoning
+                # model exhausts its visible output budget on thinking
+                # tokens. Treat it as a recoverable member failure so the
+                # fallback chain proceeds and last_error stays diagnostic
+                # instead of leaking an AttributeError.
+                raise RuntimeError(
+                    f"{provider}/{model} returned no usable content "
+                    "(empty or reasoning-only response)"
+                )
+            text = content.strip()
             usage = getattr(resp, "usage", None)
             tokens = getattr(usage, "total_tokens", 0) if usage else 0
             return text, tokens
