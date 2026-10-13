@@ -126,6 +126,60 @@ def _fake_openai_response(content: str = '{"ok":true}', tokens: int = 7):
     )
 
 
+def test_call_llm_null_content_falls_back_to_next_member(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """content=None (reasoning-budget-exhausted response) is a recoverable
+    member failure: the fallback must be tried instead of crashing."""
+    calls = []
+
+    class FakeCompletions:
+        def create(self, **_kwargs):
+            calls.append(1)
+            if len(calls) == 1:
+                return _fake_openai_response(None, 3)  # type: ignore[arg-type]
+            return _fake_openai_response("fallback-text", 5)
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    monkeypatch.setattr(engine, "OpenAI", FakeClient)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    member = {
+        "provider": "openai",
+        "model": "thinking-primary",
+        "fallback": [{"provider": "openai", "model": "instruct-fallback"}],
+    }
+    text, tokens = engine.call_llm(member, "system", "user")
+    assert text == "fallback-text"
+    assert tokens == 5
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("content", [None, "", "   "])
+def test_call_llm_exhaustion_reports_diagnostic_error_not_attributeerror(
+    monkeypatch: pytest.MonkeyPatch, content
+) -> None:
+    """When every member of the chain returns unusable content, the final
+    RuntimeError must name the real cause, not an internal crash."""
+    class FakeCompletions:
+        def create(self, **_kwargs):
+            return _fake_openai_response(content, 2)  # type: ignore[arg-type]
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            self.chat = SimpleNamespace(completions=FakeCompletions())
+
+    monkeypatch.setattr(engine, "OpenAI", FakeClient)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    with pytest.raises(RuntimeError, match="no usable content") as exc:
+        engine.call_llm({"provider": "openai", "model": "m"}, "s", "u")
+    assert "NoneType" not in str(exc.value)
+
+
 def test_call_llm_releases_model_after_success(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeCompletions:
         def create(self, **_kwargs):
